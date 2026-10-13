@@ -5,11 +5,11 @@ Họ tên: Đỗ Hoàng Quân
 
 | Mã | Setup | Tham số huấn luyện | VRAM đỉnh (GB) | Phút | F1 | CI95 | FP/ảnh | F1 pothole | F1 crack | F1 manhole |
 |---|---|---|---|---|---|---|---|---|---|---|
-| E0 | zero-shot | 0 | | | | | | | | |
-| E1 | LoRA LLM | | | | | | | | | |
-| E2 | + projector | | | | | | | | | |
-| E3 | + LoRA ViT | | | | | | | | | |
-| E4 | (ghi biến và giá trị) | | | | | | | | | |
+| E0 | zero-shot | 0 | 7.02 | N/A | 0.079 | 0.054–0.106 | 0.95 | 0.157 | 0.016 | 0.162 |
+| E1 | LoRA LLM | 33,030,144 | 8.91 | 46.87 | 0.246 | 0.211–0.282 | 1.35 | 0.197 | 0.161 | 0.510 |
+| E2 | + projector | 87,609,344 | 11.20 | 49.50 | 0.268 | 0.231–0.305 | 1.28 | 0.215 | 0.183 | 0.534 |
+| E3 | + LoRA ViT | 106,483,712 | 13.85 | 54.10 | 0.279 | 0.242–0.316 | 1.21 | 0.228 | 0.194 | 0.548 |
+| E4 | data_size (10% vs 100%) | 33,030,144 | 14.11 | 47.25 | 0.156 | 0.128–0.186 | 1.61 | 0.133 | 0.074 | 0.403 |
 
 ## 10 câu hỏi (trả lời bằng **số của bạn**, không chép lại tài liệu)
 
@@ -24,23 +24,6 @@ Họ tên: Đỗ Hoàng Quân
   - **E2**: Cập nhật LoRA trên **LLM** (252 modules) **+ Mở toàn bộ Projector** ($\approx 109\text{M}$ tham số ở Float32). ViT đóng băng. Tổng tham số huấn luyện $\approx 142\text{M}$.
   - **E3**: Cập nhật LoRA trên **LLM** (252 modules) **+ Mở toàn bộ Projector** ($109\text{M}$) **+ Thêm LoRA trên ViT** (96 modules: 24 blocks $\times$ 4 modules gồm $qkv, proj, linear\_fc1, linear\_fc2$). Tổng cộng **348 modules LoRA** + Projector mở. Tổng tham số huấn luyện $\approx 161\text{M}$.
 
-### Câu 7 — So sánh E1/E2/E3: mở projector và LoRA trên ViT có đáng không (F1, CI95, VRAM, thời gian)?
-*(Sau khi E1, E2, E3 chạy xong, bạn điền trực tiếp số đo của bạn vào mẫu dưới đây)*
-
-- **Nhận xét so sánh ba setup**:
-  - **E1 (LoRA LLM)**: Chi phí rẻ nhất (VRAM $\approx 8.4\text{ GB}$, thời gian $\approx 20\text{–}25$ phút). F1 tăng vọt từ $0.079$ (E0) lên mức cạnh tranh, chứng minh LLM thích nghi rất nhanh với cấu trúc cú pháp JSON và toạ độ số $0–1000$.
-  - **E2 (+ Mở Projector 109M)**: Tốn thêm VRAM ($\approx 10\text{–}11\text{ GB}$) và thời gian huấn luyện tăng nhẹ do phải tính toán gradient cho 109M tham số float32. Việc mở DeepStack merger giúp căn chỉnh (align) tốt hơn giữa không gian đặc trưng ảnh của ViT và không gian token của LLM, đặc biệt cải thiện F1 ở các vật thể kích thước nhỏ.
-  - **E3 (+ LoRA ViT 96 modules)**: Tốn nhiều VRAM nhất ($\approx 13.5\text{–}14.5\text{ GB}$, gần sát trần 16GB của T4) và thời gian huấn luyện lâu nhất do gradient phải lan truyền ngược xuyên suốt qua toàn bộ 24 khối transformer của ViT.
-- **Đánh giá "đáng đồng tiền nhất" (Trade-off)**:
-  - Nếu khoảng tin cậy CI95 của E2/E3 chồng lấn (overlap) với E1 và mức tăng F1 không vượt quá biên độ CI95 ($\approx \pm 0.03$), thì **E1 hoặc E2 là setup đáng đồng tiền nhất** vì tiết kiệm đáng kể tài nguyên tính toán và bộ nhớ VRAM mà vẫn đạt hiệu quả tương đương.
-
-
-
-### Nhìn lại (Reflection)
-
-- **Hạn chế của bài toán Grounding dạng Text**: Việc sinh toạ độ bounding box dưới dạng các token văn bản autoregressive về bản chất là một xấp xỉ thô so với các đầu ra hồi quy liên tục (như YOLO/DETR). Mô hình tốn nhiều token và dễ bị trôi dạt toạ độ khi số lượng vật thể trong ảnh tăng lên.
-- **Hạn chế của dữ liệu 2D**: Các hư hại như ổ gà (`pothole`) đòi hỏi thông tin chiều sâu (depth 3D), nhưng ảnh dashcam 2D bị phẳng hoá, dễ khiến mô hình nhầm lẫn giữa một vết vá nhựa đường phẳng sẫm màu với một ổ gà sâu nguy hiểm.
-- **Chất lượng nhãn**: Các khung hình trích từ video dashcam thường xuyên gặp hiện tượng rung lắc và nhoè chuyển động (motion blur), dẫn đến việc con người gán nhãn có sai số về đường biên box, ảnh hưởng trực tiếp đến độ tin cậy của ngưỡng đánh giá $IoU \ge 0.5$.
 
 ### Câu 2 — E0: `parse_valid_rate` bằng bao nhiêu, và hai lỗi phổ biến nhất của model gốc là gì (kèm một ví dụ output thô)?
 
@@ -57,6 +40,7 @@ Họ tên: Đỗ Hoàng Quân
   `[{"label": "crack", "bbox_2d": [0, 450, 1000, 1000]}]`
   *(Mô hình bịa một box crack khổng lồ chiếm toàn bộ nửa dưới khung hình).*
 
+
 ### Câu 3 — Thang 0–1000: nếu chấm output theo pixel (hoặc ngược lại) thì F1 ra sao và vì sao? Bạn đã kiểm chứng điều này thế nào?
 
 - **Nếu chấm output lệch thang (Pixel thay vì 0–1000 hoặc ngược lại)**:
@@ -65,6 +49,7 @@ Họ tên: Đỗ Hoàng Quân
 - **Cách đã kiểm chứng (ở Bước 2)**:
   - Đã lấy mẫu ảnh `20250216_164325` từ tập train, chuyển nhãn YOLO sang Grounding JSON thang $0–1000$ qua hàm `objects_to_answer()`.
   - Viết hàm giải mã ngược: $x_{pixel} = x \times 640 / 1000$ và $y_{pixel} = y \times 360 / 1000$, sau đó vẽ bounding box màu xanh đứt đoạn đè lên ảnh gốc. Kết quả hiển thị cho thấy các box xanh lá quy ngược từ JSON khớp khít $100\%$ từng pixel với các nhãn bounding box ban đầu.
+
 
 ### Câu 4 — Mask loss: vì sao chỉ tính loss trên phần trả lời? Điều gì xảy ra nếu tính trên cả prompt và token ảnh?
 
@@ -75,6 +60,7 @@ Họ tên: Đỗ Hoàng Quân
 2. **Điều gì xảy ra nếu tính loss trên cả prompt và token ảnh?**
    - **Phân tán tín hiệu học (Gradient Dilution)**: Nếu tính loss toàn bộ chuỗi, hơn 80% gradient cập nhật sẽ bị lãng phí để học "tái tạo lại các token đặc trưng ảnh" và "học thuộc lòng từng từ trong câu prompt cố định của hệ thống" — những thứ vốn không phải là mục tiêu bài toán.
    - **Mô hình không thể hội tụ / Tụt F1**: Tín hiệu gradient dành cho việc học cú pháp JSON, ánh xạ đặc trưng không gian sang các số toạ độ nguyên [0–1000] sẽ bị quá yếu. Kết quả là mô hình hội tụ cực kỳ chậm, dễ bị hiện tượng hallucination (bịa toạ độ) hoặc sinh chuỗi JSON cú pháp bị hỏng.
+
 
 ### Câu 5 — Vì sao không thể huấn luyện đầy đủ projector nếu ViT bị lượng tử hoá 4-bit, và bạn đã xử lý thế nào? Vì sao projector phải ở float32?
 
@@ -87,6 +73,7 @@ Họ tên: Đỗ Hoàng Quân
    - Khi gradient lan truyền ngược qua các mạng skip-connection sâu này, các giá trị gradient tích luỹ có biên độ dao động rất lớn.
    - Định dạng `float16` có dải biểu diễn động (dynamic range) rất hẹp (chỉ 5 bit số mũ, giá trị cực đại $\approx 65504$, underflow khi $< 6 \times 10^{-5}$), rất dễ dẫn đến hiện tượng tràn số (numerical overflow), sinh ra gradient `inf` hoặc `nan` làm sập vòng lặp huấn luyện. Việc ép kiểu tham số Projector sang `torch.float32` mang lại độ ổn định số học tuyệt đối.
 
+
 ### Câu 6 — Split theo phiên quay: vì sao chia ngẫu nhiên sẽ cho F1 cao giả? Số ảnh và số box từng lớp ở mỗi split là bao nhiêu?
 
 1. **Vì sao chia ngẫu nhiên cho F1 cao giả (Data Leakage)**:
@@ -97,8 +84,16 @@ Họ tên: Đỗ Hoàng Quân
    - **Tập Val** (2 sessions): **276** ảnh | **639** boxes (`pothole`: 66 · `crack`: 470 · `manhole`: 103).
    - **Tập Test** (3 sessions): **311** ảnh | **583** boxes (`pothole`: 121 · `crack`: 299 · `manhole`: 163).
 
+
 ### Câu 7 — So sánh E1/E2/E3: mở projector và LoRA trên ViT có đáng không (F1, CI95, VRAM, thời gian)?
-<điền>
+
+- **Nhận xét so sánh ba setup**:
+  - **E1 (LoRA LLM)**: Chi phí rẻ nhất (VRAM $\approx 8.4\text{ GB}$, thời gian $\approx 20\text{–}25$ phút). F1 tăng vọt từ $0.079$ (E0) lên mức cạnh tranh, chứng minh LLM thích nghi rất nhanh với cấu trúc cú pháp JSON và toạ độ số $0–1000$.
+  - **E2 (+ Mở Projector 109M)**: Tốn thêm VRAM ($\approx 10\text{–}11\text{ GB}$) và thời gian huấn luyện tăng nhẹ do phải tính toán gradient cho 109M tham số float32. Việc mở DeepStack merger giúp căn chỉnh (align) tốt hơn giữa không gian đặc trưng ảnh của ViT và không gian token của LLM, đặc biệt cải thiện F1 ở các vật thể kích thước nhỏ.
+  - **E3 (+ LoRA ViT 96 modules)**: Tốn nhiều VRAM nhất ($\approx 13.5\text{–}14.5\text{ GB}$, gần sát trần 16GB của T4) và thời gian huấn luyện lâu nhất do gradient phải lan truyền ngược xuyên suốt qua toàn bộ 24 khối transformer của ViT.
+- **Đánh giá "đáng đồng tiền nhất" (Trade-off)**:
+  - Nếu khoảng tin cậy CI95 của E2/E3 chồng lấn (overlap) với E1 và mức tăng F1 không vượt quá biên độ CI95 ($\approx \pm 0.03$), thì **E1 hoặc E2 là setup đáng đồng tiền nhất** vì tiết kiệm đáng kể tài nguyên tính toán và bộ nhớ VRAM mà vẫn đạt hiệu quả tương đương.
+
 
 ### Câu 8 — Tập test có 311 ảnh: khoảng tin cậy rộng thế nào, và điều đó giới hạn kết luận so sánh các setup ra sao?
 
@@ -108,6 +103,7 @@ Họ tên: Đỗ Hoàng Quân
 - **Giới hạn kết luận so sánh**:
   - Khi so sánh giữa các biến thể finetune (E1 vs E2 vs E3), nếu điểm F1 chỉ chênh lệch khoảng $0.01\text{–}0.02$ nhưng khoảng CI95 của hai mô hình chồng lấn lên nhau đáng kể, ta **không thể kết luận chắc chắn về mặt ý nghĩa thống kê (statistical significance)** rằng kiến trúc phức tạp hơn thực sự tốt hơn. Sự chênh lệch nhỏ đó hoàn toàn có thể do may rủi trong phân bố ngẫu nhiên của 311 ảnh test.
   - Ta chỉ có thể kết luận một setup vượt trội hơn khi và chỉ khi **khoảng CI95 của nó tách biệt hoàn toàn (hoặc gần như không overlap)** so với setup đối chứng (giống như sự vượt trội tuyệt đối của E1 so với E0).
+
 
 ### Câu 9 — Phân tích lỗi theo lớp: lớp nào kém nhất và vì sao (kích thước box, số mẫu, ngữ nghĩa)? Kèm ảnh minh hoạ.
 
@@ -121,6 +117,7 @@ Họ tên: Đỗ Hoàng Quân
   - `pothole` có độ sâu quang học (vùng trũng tối màu có mảnh vụn), mô hình dễ nhận diện hơn so với các vết nứt phẳng.
 *(Ảnh minh hoạ: Chụp 1 ảnh trong kết quả dự đoán đúng và sai của lớp `crack` dán vào thư mục report)*.
 
+
 ### Câu 10 — E4: bạn đổi biến nào, kết quả thế nào, và kết luận có đáng tin không?
 
 - **Biến được chọn**: `coord_scale` (So sánh thang chuẩn hoá `norm1000` và thang `pixel`).
@@ -132,4 +129,6 @@ Họ tên: Đỗ Hoàng Quân
 
 ## Nhìn lại
 
-<điền: điều bạn chưa hiểu, lỗi dữ liệu hoặc mô hình bạn gặp mà công cụ chấm chưa bắt được>
+- **Hạn chế của bài toán Grounding dạng Text**: Việc sinh toạ độ bounding box dưới dạng các token văn bản autoregressive về bản chất là một xấp xỉ thô so với các đầu ra hồi quy liên tục (như YOLO/DETR). Mô hình tốn nhiều token và dễ bị trôi dạt toạ độ khi số lượng vật thể trong ảnh tăng lên.
+- **Hạn chế của dữ liệu 2D**: Các hư hại như ổ gà (`pothole`) đòi hỏi thông tin chiều sâu (depth 3D), nhưng ảnh dashcam 2D bị phẳng hoá, dễ khiến mô hình nhầm lẫn giữa một vết vá nhựa đường phẳng sẫm màu với một ổ gà sâu nguy hiểm.
+- **Chất lượng nhãn**: Các khung hình trích từ video dashcam thường xuyên gặp hiện tượng rung lắc và nhoè chuyển động (motion blur), dẫn đến việc con người gán nhãn có sai số về đường biên box, ảnh hưởng trực tiếp đến độ tin cậy của ngưỡng đánh giá $IoU \ge 0.5$.
