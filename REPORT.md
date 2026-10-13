@@ -48,7 +48,14 @@ Họ tên: <điền họ tên>
 - Kết quả là $F1 \approx 0$ ngay cả khi JSON hoàn toàn hợp lệ.
 
 ### Câu 4 — Mask loss: vì sao chỉ tính loss trên phần trả lời? Điều gì xảy ra nếu tính trên cả prompt và token ảnh?
-<điền>
+
+1. **Vì sao chỉ tính loss trên phần trả lời (Assistant answer)?**
+   - **Tỷ lệ token**: Trong một mẫu huấn luyện của bài toán này (ảnh 640×360), phần thị giác chiếm cố định đúng **220 visual tokens** và câu lệnh hệ thống (Prompt) chiếm khoảng **60 tokens**. Trong khi đó, chuỗi JSON đích (Assistant answer) chỉ chiếm khoảng **40–80 tokens**. Như vậy, prompt và token ảnh chiếm tới hơn **75% – 85%** tổng chiều dài chuỗi đầu vào.
+   - **Bản chất nhiệm vụ**: Đây là bài toán *Conditional Generation* (sinh có điều kiện): mô hình nhận điều kiện đầu vào là (Ảnh + Prompt) và nhiệm vụ duy nhất cần học là *dự đoán chuỗi toạ độ JSON chính xác*. Ta sử dụng nhãn `-100` (giá trị `ignore_index` mặc định của PyTorch `CrossEntropyLoss`) để triệt tiêu hoàn toàn gradient của phần prompt và ảnh.
+
+2. **Điều gì xảy ra nếu tính loss trên cả prompt và token ảnh?**
+   - **Phân tán tín hiệu học (Gradient Dilution)**: Nếu tính loss toàn bộ chuỗi, hơn 80% gradient cập nhật sẽ bị lãng phí để học "tái tạo lại các token đặc trưng ảnh" và "học thuộc lòng từng từ trong câu prompt cố định của hệ thống" — những thứ vốn không phải là mục tiêu bài toán.
+   - **Mô hình không thể hội tụ / Tụt F1**: Tín hiệu gradient dành cho việc học cú pháp JSON, ánh xạ đặc trưng không gian sang các số toạ độ nguyên [0–1000] sẽ bị quá yếu. Kết quả là mô hình hội tụ cực kỳ chậm, dễ bị hiện tượng hallucination (bịa toạ độ) hoặc sinh chuỗi JSON cú pháp bị hỏng.
 
 ### Câu 5 — Vì sao không thể huấn luyện đầy đủ projector nếu ViT bị lượng tử hoá 4-bit, và bạn đã xử lý thế nào? Vì sao projector phải ở float32?
 <điền>
