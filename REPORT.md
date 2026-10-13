@@ -20,7 +20,20 @@ Họ tên: <điền họ tên>
 <điền>
 
 ### Câu 3 — Thang 0–1000: nếu chấm output theo pixel (hoặc ngược lại) thì F1 ra sao và vì sao? Bạn đã kiểm chứng điều này thế nào?
-<điền>
+
+**Vì sao Qwen3-VL dùng thang 0–1000 chứ không dùng pixel tuyệt đối?**
+
+1. **Độc lập với độ phân giải và tỉ lệ khung hình (Resolution-agnostic):** 
+   - Đầu vào của Vision Transformer (ViT) thường được resize hoặc chia thành các dynamic patches (ví dụ patch $14 \times 14$ hoặc $28 \times 28$). 
+   - Khi dùng thang chuẩn hóa $[0, 1000]$, mô hình học được mối quan hệ vị trí tương đối độc lập với kích thước pixel thực tế (dù ảnh là $640 \times 360$, $1920 \times 1080$ hay $4K$ thì góc trên-trái vẫn là $(0, 0)$ và góc dưới-phải vẫn là $(1000, 1000)$).
+2. **Không gian token số gọn và phân phối hữu hạn:**
+   - Các số nguyên từ $0$ đến $1000$ là một tập số hữu hạn, cố định và phân bổ đều trong tokenizer của LLM. LLM dễ học phân phối xác suất và tự hồi quy (autoregression) trên tập số quen thuộc này hơn rất nhiều so với toạ độ pixel có thể biến thiên từ vài chục đến hàng nghìn đơn vị tuỳ ảnh.
+3. **Kế thừa tri thức Pre-training (Visual Grounding Prior):**
+   - Dòng mô hình Qwen-VL (Qwen2-VL, Qwen3-VL) được pre-train trên hàng triệu cặp grounding đa nhiệm theo quy ước chuẩn $[0, 1000]$. Giữ nguyên định dạng này giúp tận dụng tối đa năng lực định vị không gian sẵn có của pre-trained model.
+
+**Nếu chấm output theo pixel (hoặc ngược lại) thì F1 ra sao?**
+- Nếu model sinh ra toạ độ trên thang $[0, 1000]$ mà tool chấm điểm (`score.py`) tính theo pixel (hoặc ngược lại, model trả pixel $0-640$ mà tool coi là $0-1000$), thì diện tích giao nhau IoU giữa box dự đoán và nhãn ground-truth sẽ gần như bằng **0**. 
+- Kết quả là $F1 \approx 0$ ngay cả khi JSON hoàn toàn hợp lệ.
 
 ### Câu 4 — Mask loss: vì sao chỉ tính loss trên phần trả lời? Điều gì xảy ra nếu tính trên cả prompt và token ảnh?
 <điền>
