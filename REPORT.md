@@ -17,7 +17,19 @@ Họ tên: <điền họ tên>
 <điền>
 
 ### Câu 2 — E0: `parse_valid_rate` bằng bao nhiêu, và hai lỗi phổ biến nhất của model gốc là gì (kèm một ví dụ output thô)?
-<điền>
+
+- **parse_valid_rate**: 0.8682 (86.82% mẫu parse được JSON, còn lại 13.18% bị lỗi format do sinh thêm văn bản giải thích/markdown).
+- **Điểm số baseline**: F1 = 0.079 (CI95: [0.054, 0.106]), Precision = 0.109, Recall = 0.062, FP/ảnh = 0.9486.
+- **Hai lỗi phổ biến nhất của E0**:
+  1. **Bịa box (Hallucinated bounding box / False Positives cao)**:
+     - Tỷ lệ FP/ảnh lên tới 0.95 (trung bình cứ 1 ảnh thì mô hình tự bịa gần 1 box ảo), khiến Precision chung tụt xuống 0.109.
+     - Mô hình zero-shot thường sinh ra các box vô nghĩa bao trùm diện tích bất thường (ví dụ bao phủ toàn bộ nửa dưới mặt đường từ x=0 đến 1000, y=450 đến 1000) thay vì khoanh đúng vị trí hư hại thực tế.
+  2. **Sai lớp và bỏ sót nặng (Misclassification / Extreme Low Recall)**:
+     - Recall tổng thể chỉ đạt 0.062 (bỏ sót 93.8% hư hại thật).
+     - Đặc biệt lớp `crack` bị mô hình nhận diện cực kỳ kém: Precision chỉ 0.019 (1.9%), Recall 0.013, F1 = 0.016. Mô hình thường xuyên nhầm lẫn các vết nứt, bóng đổ hoặc gờ đường thành `manhole` hoặc bỏ qua hoàn toàn và trả về danh sách rỗng `[]`.
+- **Ví dụ output thô thực tế (Ảnh vlcsnap-00201)**:
+  `[{"label": "crack", "bbox_2d": [0, 450, 1000, 1000]}]`
+  *(Mô hình bịa một box crack khổng lồ chiếm toàn bộ nửa dưới khung hình).*
 
 ### Câu 3 — Thang 0–1000: nếu chấm output theo pixel (hoặc ngược lại) thì F1 ra sao và vì sao? Bạn đã kiểm chứng điều này thế nào?
 
