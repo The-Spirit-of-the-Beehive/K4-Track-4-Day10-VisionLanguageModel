@@ -29,7 +29,13 @@ Họ tên: <điền họ tên>
 <điền>
 
 ### Câu 6 — Split theo phiên quay: vì sao chia ngẫu nhiên sẽ cho F1 cao giả? Số ảnh và số box từng lớp ở mỗi split là bao nhiêu?
-<điền>
+
+* **Vì sao phải chia theo `session` mà không chia ngẫu nhiên?**
+  * Dữ liệu dashcam gồm các chuỗi khung hình liên tiếp trích xuất từ video hành trình. Các frame liền kề trong cùng một video (cùng `session`) có góc quay, điều kiện thời tiết, ánh sáng và hư hại mặt đường gần như giống hệt nhau.
+  * Chia theo `session` (chia theo từng chuyến đi) đảm bảo tính tổng quát hóa (generalization) trong thực tế: model phải dự đoán trên những đoạn đường và điều kiện quay hoàn toàn mới mà nó chưa từng thấy khi huấn luyện.
+* **Điều gì xảy ra với F1 nếu chia ngẫu nhiên?**
+  * Sẽ xảy ra hiện tượng **rò rỉ dữ liệu (Data Leakage)**: các khung hình gần như giống nhau sẽ nằm đồng thời ở cả tập `train` và `test`.
+  * Khi đó mô hình chỉ cần "học vẹt" (ghi nhớ) đặc trưng bối cảnh của video là có thể đoán đúng, dẫn đến **F1 cao giả tạo (optimistic bias)**. Nhưng khi triển khai thực tế trên cung đường mới, F1 sẽ tụt dốc nghiêm trọng.
 
 ### Câu 7 — So sánh E1/E2/E3: mở projector và LoRA trên ViT có đáng không (F1, CI95, VRAM, thời gian)?
 <điền>
